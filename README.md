@@ -1,79 +1,129 @@
-# 美股市场事件收集器
+# US Stock Market Events Collector
 
-这是一个自动化工具，用于收集和整理美股市场的重要事件，并将其同步到Notion数据库。
+An automated tool for collecting and organizing important events in the US stock market and synchronizing them to a Notion database.
 
-## 功能特点
+## Features
 
-- 自动收集每日美股市场重要事件
-- 自动收集每周美股市场重要事件
-- 支持多种事件类型：
-  - 经济数据发布
-  - 美联储活动
-  - 公司财报
-  - IPO事件
-  - 分红除息
-  - 重大政策变动
-  - 其他重要市场事件
-- 自动同步到Notion数据库
-- 支持定时任务调度
+- Automated daily US stock market events collection
+- Automated weekly US stock market events collection
+- Support for multiple event types:
+  - Economic data releases (CPI, PPI, NFP, etc.)
+  - Federal Reserve activities
+  - Company earnings reports
+  - IPO events
+  - Dividend distributions
+  - Major policy changes
+  - Geopolitical events
+- Automatic synchronization with Notion database
+- Scheduled task management
+- Real-time breaking news monitoring
+- Market sentiment analysis
+- Earnings calendar tracking
 
-## 安装要求
+## Requirements
 
 - Python 3.8+
-- 依赖包（见 requirements.txt）
+- Dependencies (see requirements.txt)
 - Notion API Token
 - DeepSeek API Token
 
-## 安装步骤
+## Installation
 
-1. 克隆仓库：
+1. Clone the repository:
 ```bash
-git clone [your-repository-url]
+git clone https://github.com/Lastvish/finance-news-collect.git
 cd finance-news-collect
 ```
 
-2. 安装依赖：
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. 配置环境变量：
-创建 `.env` 文件并添加以下配置：
+3. Configure environment variables:
+Create a `.env` file and add the following configurations:
 ```
 NOTION_TOKEN=your_notion_token
 NOTION_DATABASE_ID=your_database_id
 DEEPSEEK_API_KEY=your_deepseek_api_key
 ```
 
-## 使用方法
+## Usage
 
-### 单次运行
+### One-time Collection
 
-收集每日事件：
+Collect daily events:
 ```bash
 python main.py --run-once daily
 ```
 
-收集每周事件：
+Collect weekly events:
 ```bash
 python main.py --run-once weekly
 ```
 
-### 守护进程模式
+### Daemon Mode
 
-启动定时任务：
+Start scheduled tasks:
 ```bash
 python main.py --daemon
 ```
 
-## 项目结构
+## Project Structure
 
-- `main.py`: 主程序入口
-- `data_collector.py`: 数据收集模块
-- `notion_updater.py`: Notion同步模块
-- `scheduler.py`: 定时任务调度器
-- `config.py`: 配置文件
+- `main.py`: Main program entry point
+- `data_collector.py`: Data collection module
+  - Collects events from various sources
+  - Processes and structures event data
+  - Performs sentiment analysis
+- `notion_updater.py`: Notion synchronization module
+  - Manages Notion database updates
+  - Handles duplicate detection
+  - Formats data for Notion
+- `scheduler.py`: Task scheduler
+  - Manages scheduled tasks
+  - Handles different collection frequencies
+  - Coordinates data flow
+- `config.py`: Configuration file
+  - API keys and tokens (use .env instead)
+  - Schedule settings
+  - Search prompts
 
-## 许可证
+## Scheduled Tasks
+
+- Weekly events collection: Every Sunday at 20:00
+- Daily events collection: 
+  - Pre-market: 08:00 ET
+  - Post-market: 17:00 ET
+- Breaking news monitoring: Every 2 hours
+- Earnings events: Daily at 07:00 ET
+- Market sentiment analysis: 
+  - Pre-market: 08:30 ET
+  - Post-market: 16:30 ET
+
+## Data Structure
+
+Events are stored with the following attributes:
+- Date
+- Time
+- Description
+- Event Type
+- Market Phase
+- Market Impact
+- Sentiment
+- Sector Impact
+- Affected Stocks
+- Confidence Level
+- Source URL
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a new Pull Request
+
+## License
 
 MIT License 
