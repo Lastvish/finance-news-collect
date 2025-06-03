@@ -7,6 +7,13 @@ from data_collector import DataCollector
 from notion_updater import NotionUpdater
 from scheduler import EventScheduler
 from config import LOG_FILE, LOG_LEVEL
+from dotenv import load_dotenv
+import time
+import concurrent.futures
+from functools import lru_cache
+
+# Load environment variables
+load_dotenv()
 
 # 配置日志
 log_level = getattr(logging, LOG_LEVEL.upper(), logging.INFO)
