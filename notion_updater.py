@@ -2,17 +2,23 @@ import logging
 import json
 from datetime import datetime
 from notion_client import Client
-from config import NOTION_API_KEY, NOTION_DATABASE_ID
+from config import NOTION_API_KEY, NOTION_DATABASE_ID, DEEPSEEK_API_KEY
+from openai import OpenAI
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class NotionUpdater:
-    def __init__(self):
+    def __init__(self, parent_page_id=None):
         self.notion_api_key = NOTION_API_KEY
         self.database_id = NOTION_DATABASE_ID
+        self.parent_page_id = parent_page_id
         self.notion = Client(auth=self.notion_api_key)
+        self.client = OpenAI(
+            api_key=DEEPSEEK_API_KEY,
+            base_url="https://api.deepseek.com"
+        )
         
     def _get_existing_events(self):
         """获取Notion数据库中已存在的事件"""
@@ -220,33 +226,186 @@ class NotionUpdater:
             logger.error(f"Error creating event page: {str(e)}")
             return None
     
+    def _generate_daily_summary(self, events):
+        """生成每日市场事件的总结分析"""
+        try:
+            if not events:
+                return "今日无重要市场事件。"
+            
+            # 构建分析提示词
+            summary_prompt = f"""作为专业的金融分析师，请对以下今日美股市场事件进行全面分析和总结：
+
+事件列表：
+{json.dumps(events, ensure_ascii=False, indent=2)}
+
+请提供以下分析：
+1. 当日市场主要事件概述
+2. 重要经济数据分析
+3. 企业财报及重大公告分析
+4. 市场情绪评估
+5. 潜在市场影响分析
+6. 需要重点关注的领域和个股
+7. 风险提示
+
+请以精炼报告的形式输出，确保分析深入但简明扼要。"""
+
+            # 调用 DeepSeek API 生成分析
+            response = self.client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": "你是一个专业的金融分析师，擅长总结和分析市场事件。请提供准确、专业、有见地的分析。"},
+                    {"role": "user", "content": summary_prompt}
+                ],
+                temperature=0.3,
+                max_tokens=2000
+            )
+            
+            summary = response.choices[0].message.content
+            return summary
+            
+        except Exception as e:
+            logger.error(f"Error generating daily summary: {str(e)}")
+            return "生成每日总结时发生错误。"
+
+    def _create_daily_page(self, events):
+        """创建每日市场事件页面，包含总结和详细信息"""
+        try:
+            # 获取当前日期
+            today = datetime.now()
+            date_str = today.strftime("%Y-%m-%d")
+            
+            logger.info(f"开始创建每日页面: {date_str}")
+            logger.info(f"事件数量: {len(events)}")
+            
+            # 生成每日总结
+            logger.info("开始生成每日总结...")
+            daily_summary = self._generate_daily_summary(events)
+            logger.info("每日总结生成完成")
+            
+            # 创建新的页面
+            logger.info("开始创建 Notion 页面...")
+            new_page = self.notion.pages.create(
+                parent={"page_id": self.parent_page_id} if self.parent_page_id else {"database_id": self.database_id},
+                properties={
+                    "title": {
+                        "title": [
+                            {
+                                "text": {
+                                    "content": f"美股市场日报 {date_str}"
+                                }
+                            }
+                        ]
+                    }
+                },
+                children=[
+                    {
+                        "object": "block",
+                        "type": "heading_1",
+                        "heading_1": {
+                            "rich_text": [{"type": "text", "text": {"content": "市场总结"}}]
+                        }
+                    },
+                    {
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": [{"type": "text", "text": {"content": daily_summary}}]
+                        }
+                    },
+                    {
+                        "object": "block",
+                        "type": "heading_1",
+                        "heading_1": {
+                            "rich_text": [{"type": "text", "text": {"content": "详细事件"}}]
+                        }
+                    },
+                    {
+                        "object": "block",
+                        "type": "table",
+                        "table": {
+                            "table_width": 7,
+                            "has_column_header": True,
+                            "has_row_header": False,
+                            "children": [
+                                {
+                                    "type": "table_row",
+                                    "table_row": {
+                                        "cells": [
+                                            [{"type": "text", "text": {"content": "时间"}}],
+                                            [{"type": "text", "text": {"content": "事件描述"}}],
+                                            [{"type": "text", "text": {"content": "事件类型"}}],
+                                            [{"type": "text", "text": {"content": "市场阶段"}}],
+                                            [{"type": "text", "text": {"content": "市场影响"}}],
+                                            [{"type": "text", "text": {"content": "市场情绪"}}],
+                                            [{"type": "text", "text": {"content": "信息来源"}}]
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            )
+            logger.info(f"Notion 页面创建成功，ID: {new_page.get('id')}")
+            
+            # 添加事件到表格
+            logger.info("开始添加事件到表格...")
+            success_count = 0
+            for i, event in enumerate(events, 1):
+                try:
+                    self.notion.blocks.children.append(
+                        block_id=new_page["id"],
+                        children=[
+                            {
+                                "object": "block",
+                                "type": "table_row",
+                                "table_row": {
+                                    "cells": [
+                                        [{"type": "text", "text": {"content": event.get("time", "未指定时间")}}],
+                                        [{"type": "text", "text": {"content": event.get("description", "无描述")}}],
+                                        [{"type": "text", "text": {"content": event.get("type", "其他")}}],
+                                        [{"type": "text", "text": {"content": event.get("market_phase", "其他")}}],
+                                        [{"type": "text", "text": {"content": event.get("market_impact", "影响不确定")}}],
+                                        [{"type": "text", "text": {"content": event.get("sentiment", "未知")}}],
+                                        [{"type": "text", "text": {"content": event.get("source_url", "未知来源")}}]
+                                    ]
+                                }
+                            }
+                        ]
+                    )
+                    success_count += 1
+                    if i % 5 == 0:  # 每添加5个事件记录一次进度
+                        logger.info(f"已成功添加 {i}/{len(events)} 个事件")
+                except Exception as e:
+                    logger.error(f"添加第 {i} 个事件时出错: {str(e)}")
+            
+            logger.info(f"表格添加完成，成功添加 {success_count}/{len(events)} 个事件")
+            logger.info(f"每日页面创建完成: {date_str}")
+            return new_page
+            
+        except Exception as e:
+            logger.error(f"创建每日页面时出错: {str(e)}")
+            return None
+
     def update_notion_with_events(self, events):
-        """将事件更新到Notion数据库"""
-        if not events:
-            logger.warning("No events to update")
+        """更新Notion，创建新的每日页面"""
+        try:
+            if not events:
+                logger.info("No events to update")
+                return 0
+            
+            # 创建每日页面
+            new_page = self._create_daily_page(events)
+            if not new_page:
+                logger.error("Failed to create daily page")
+                return 0
+            
+            logger.info(f"Successfully created daily page with {len(events)} events")
+            return len(events)
+            
+        except Exception as e:
+            logger.error(f"Error updating Notion: {str(e)}")
             return 0
-        
-        logger.info(f"Updating Notion with {len(events)} events")
-        
-        # 获取已存在的事件
-        existing_events = self._get_existing_events()
-        
-        # 计数器
-        created_count = 0
-        
-        # 添加新事件
-        for event in events:
-            # 检查是否重复
-            if not self._is_duplicate_event(event, existing_events):
-                # 创建新事件
-                result = self._create_event_page(event)
-                if result:
-                    created_count += 1
-            else:
-                logger.info(f"Skipping duplicate event: {event.get('description', '')}")
-        
-        logger.info(f"Created {created_count} new events in Notion")
-        return created_count
 
 # 测试代码
 if __name__ == "__main__":
