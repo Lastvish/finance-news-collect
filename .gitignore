@@ -21,22 +21,29 @@ wheels/
 *.egg
 
 # Virtual Environment
-.env
-.venv
-env/
 venv/
+env/
 ENV/
-.venv/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+.DS_Store
 
-# Logs
+# Project specific
+.env
 *.log
+logs/
+temp/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Notion cache
+.notion/
 
 # Local configuration
-config_local.py
-.env 
+config_local.py 

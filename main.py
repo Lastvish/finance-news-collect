@@ -8,9 +8,6 @@ from notion_updater import NotionUpdater
 from scheduler import EventScheduler
 from config import LOG_FILE, LOG_LEVEL
 from dotenv import load_dotenv
-import time
-import concurrent.futures
-from functools import lru_cache
 
 # Load environment variables
 load_dotenv()
@@ -32,23 +29,26 @@ def run_once(task_type):
     collector = DataCollector()
     updater = NotionUpdater()
     
-    if task_type == "weekly":
-        logger.info("Running weekly collection task once")
-        events = collector.collect_weekly_events()
-    elif task_type == "daily":
-        logger.info("Running daily collection task once")
+    if task_type == "daily":
+        logger.info("运行每日数据收集任务")
         events = collector.collect_daily_events()
+    elif task_type == "breaking":
+        logger.info("运行突发新闻收集任务")
+        events = collector.collect_breaking_news()
+    elif task_type == "earnings":
+        logger.info("运行财报事件收集任务")
+        events = collector.collect_earnings_events()
     else:
-        logger.error(f"Unknown task type: {task_type}")
+        logger.error(f"未知的任务类型: {task_type}")
         return
     
     created_count = updater.update_notion_with_events(events)
-    logger.info(f"Task completed. Created {created_count} new events in Notion")
+    logger.info(f"任务完成，创建了 {created_count} 个事件")
 
 def main():
     """主程序入口"""
     parser = argparse.ArgumentParser(description="美股市场重大事件自动收集与Notion更新系统")
-    parser.add_argument("--run-once", choices=["weekly", "daily"], help="立即运行一次任务 (weekly/daily)")
+    parser.add_argument("--run-once", choices=["daily", "breaking", "earnings"], help="立即运行一次任务 (daily/breaking/earnings)")
     parser.add_argument("--daemon", action="store_true", help="以守护进程模式运行定时任务")
     
     args = parser.parse_args()
@@ -56,7 +56,7 @@ def main():
     if args.run_once:
         run_once(args.run_once)
     elif args.daemon:
-        logger.info("Starting scheduler in daemon mode")
+        logger.info("以守护进程模式启动调度器")
         scheduler = EventScheduler()
         scheduler.run()
     else:

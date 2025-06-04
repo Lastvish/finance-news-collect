@@ -1,129 +1,108 @@
-# US Stock Market Events Collector
+# 美股市场事件收集系统
 
-An automated tool for collecting and organizing important events in the US stock market and synchronizing them to a Notion database.
+这是一个自动化的美股市场事件收集和整理系统，可以收集每日重要市场事件和财报信息，并将其整理发布到 Notion 页面中。
 
-## Features
+## 主要功能
 
-- Automated daily US stock market events collection
-- Automated weekly US stock market events collection
-- Support for multiple event types:
-  - Economic data releases (CPI, PPI, NFP, etc.)
-  - Federal Reserve activities
-  - Company earnings reports
-  - IPO events
-  - Dividend distributions
-  - Major policy changes
-  - Geopolitical events
-- Automatic synchronization with Notion database
-- Scheduled task management
-- Real-time breaking news monitoring
-- Market sentiment analysis
-- Earnings calendar tracking
+### 1. 每日市场事件收集
+- 自动收集美股市场重要事件
+- 包括经济数据、政策变动、企业新闻等
+- 提供事件分析和市场影响评估
+- 支持多种时间格式（盘前、盘中、盘后）
+- 自动提取相关个股信息
 
-## Requirements
+### 2. 财报信息收集
+- 每周自动收集下周的重要财报信息
+- 包含详细的财报预期数据
+- EPS和营收预期分析
+- 上季度业绩回顾
+- 重点关注指标提示
 
-- Python 3.8+
-- Dependencies (see requirements.txt)
-- Notion API Token
-- DeepSeek API Token
+### 3. Notion 集成
+- 自动创建结构化的 Notion 页面
+- 提供市场事件日报
+- 生成财报周报
+- 支持信息来源链接
+- 智能生成市场分析总结
 
-## Installation
+## 使用方法
 
-1. Clone the repository:
-```bash
-git clone https://github.com/Lastvish/finance-news-collect.git
-cd finance-news-collect
-```
-
-2. Install dependencies:
+### 环境配置
+1. 安装依赖：
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Configure environment variables:
-Create a `.env` file and add the following configurations:
+2. 配置环境变量：
+- 创建 `.env` 文件并设置以下变量：
 ```
-NOTION_TOKEN=your_notion_token
-NOTION_DATABASE_ID=your_database_id
+NOTION_API_KEY=your_notion_api_key
+NOTION_PARENT_PAGE_ID=your_notion_page_id
 DEEPSEEK_API_KEY=your_deepseek_api_key
 ```
 
-## Usage
+### 运行命令
 
-### One-time Collection
-
-Collect daily events:
+1. 收集每日事件：
 ```bash
-python main.py --run-once daily
+python run_collection.py --daily
 ```
 
-Collect weekly events:
+2. 收集财报信息：
 ```bash
-python main.py --run-once weekly
+python run_collection.py --earnings
 ```
 
-### Daemon Mode
-
-Start scheduled tasks:
+3. 强制收集财报（非周日）：
 ```bash
-python main.py --daemon
+python run_collection.py --earnings --force
 ```
 
-## Project Structure
+### 定时任务
+使用 scheduler.py 设置自动运行：
+```bash
+python scheduler.py
+```
 
-- `main.py`: Main program entry point
-- `data_collector.py`: Data collection module
-  - Collects events from various sources
-  - Processes and structures event data
-  - Performs sentiment analysis
-- `notion_updater.py`: Notion synchronization module
-  - Manages Notion database updates
-  - Handles duplicate detection
-  - Formats data for Notion
-- `scheduler.py`: Task scheduler
-  - Manages scheduled tasks
-  - Handles different collection frequencies
-  - Coordinates data flow
-- `config.py`: Configuration file
-  - API keys and tokens (use .env instead)
-  - Schedule settings
-  - Search prompts
+## 数据格式
 
-## Scheduled Tasks
+### 每日事件页面
+- 标题格式：美股市场重点事件日报 YYYY-MM-DD
+- 包含市场总结和详细事件表格
+- 提供事件时间、描述、类型、影响分析等信息
 
-- Weekly events collection: Every Sunday at 20:00
-- Daily events collection: 
-  - Pre-market: 08:00 ET
-  - Post-market: 17:00 ET
-- Breaking news monitoring: Every 2 hours
-- Earnings events: Daily at 07:00 ET
-- Market sentiment analysis: 
-  - Pre-market: 08:30 ET
-  - Post-market: 16:30 ET
+### 财报信息页面
+- 标题格式：美股重点财报时间 YYYY-MM-DD 至 YYYY-MM-DD
+- 包含财报概览和详细财报信息
+- 提供发布时间、公司信息、预期数据等
 
-## Data Structure
+## 最近更新
 
-Events are stored with the following attributes:
-- Date
-- Time
-- Description
-- Event Type
-- Market Phase
-- Market Impact
-- Sentiment
-- Sector Impact
-- Affected Stocks
-- Confidence Level
-- Source URL
+### 2025-06-04
+1. 改进时间格式支持
+   - 优化盘前、盘中、盘后时间处理
+   - 标准化时间显示格式
 
-## Contributing
+2. 优化财报信息收集
+   - 改进公司信息提取
+   - 完善财报数据显示
 
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
+3. 改进数据展示
+   - 修复信息来源链接显示
+   - 优化相关个股格式
 
-## License
+## 依赖项目
+- notion-client
+- openai
+- python-dotenv
+- schedule
+- requests
 
+## 注意事项
+1. 确保 API 密钥配置正确
+2. 建议在美股交易时段运行
+3. 注意 API 调用频率限制
+4. 定期检查数据准确性
+
+## 许可证
 MIT License 
