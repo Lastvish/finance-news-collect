@@ -30,10 +30,17 @@ ENV/
 .vscode/
 *.swp
 *.swo
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# Local development
 .DS_Store
 
 # Project specific
-.env
 *.log
 logs/
 temp/

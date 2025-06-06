@@ -1,13 +1,19 @@
 # Configuration Template
 # Rename this file to config.py and fill in your API keys
 
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 # DeepSeek API Configuration
-DEEPSEEK_API_KEY = "your_deepseek_api_key"  # Get from environment variable
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")  # Get from environment variable
 DEEPSEEK_MODEL = "deepseek-chat"  # Using DeepSeek-V3 model
 
 # Notion API Configuration
-NOTION_API_KEY = "your_notion_api_key"  # Get from environment variable
-NOTION_DATABASE_ID = "your_database_id"  # Get from environment variable
+NOTION_API_KEY = os.getenv("NOTION_API_KEY")  # Get from environment variable
+NOTION_PARENT_PAGE_ID = os.getenv("NOTION_PARENT_PAGE_ID")  # Get from environment variable
 
 # Schedule Configuration
 # Weekly event collection every Sunday at 8 PM
