@@ -3,12 +3,14 @@ import json
 import logging
 import re
 import time
+import asyncio
+import aiohttp
 from openai import OpenAI  # 导入OpenAI SDK
 from datetime import datetime, timedelta
 from config import DEEPSEEK_API_KEY, DEEPSEEK_MODEL, WEEKLY_SEARCH_PROMPT, DAILY_SEARCH_PROMPT
 
 # 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', encoding='utf-8')
 logger = logging.getLogger(__name__)
 
 class APIError(Exception):
@@ -25,7 +27,8 @@ class DataCollector:
         # 初始化OpenAI客户端，配置为使用DeepSeek API
         self.client = OpenAI(
             api_key=self.deepseek_api_key,
-            base_url="https://api.deepseek.com"
+            base_url="https://api.deepseek.com",
+            default_headers={"Content-Type": "application/json; charset=utf-8"}
         )
         self.model = DEEPSEEK_MODEL
         self.max_retries = 3  # 最大重试次数
@@ -48,17 +51,40 @@ class DataCollector:
         try:
             logger.info(f"Searching with prompt: {prompt}")
             
-            def _do_search():
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": "你是一个专业的金融分析师，擅长收集和整理美股市场事件信息。请提供准确、全面的信息，并按时间顺序排列。"}, 
+            async def _do_search_async():
+                headers = {
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Authorization": f"Bearer {self.deepseek_api_key}"
+                }
+                
+                data = {
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": "你是一个专业的金融分析师，专门收集和整理美股市场事件信息。请用中文提供准确、全面的信息，并按时间顺序排列。所有事件描述都必须使用中文。"}, 
                         {"role": "user", "content": prompt}
                     ],
-                    temperature=0.3,
-                    max_tokens=2000
-                )
-                return response.choices[0].message.content
+                    "temperature": 0.3,
+                    "max_tokens": 2000
+                }
+                
+                # 配置 SSL 连接器
+                connector = aiohttp.TCPConnector(ssl=False)
+                
+                async with aiohttp.ClientSession(connector=connector) as session:
+                    async with session.post(
+                        "https://api.deepseek.com/v1/chat/completions",
+                        headers=headers,
+                        json=data
+                    ) as response:
+                        if response.status != 200:
+                            text = await response.text()
+                            raise APIError(f"DeepSeek API returned status code {response.status}: {text}")
+                        
+                        result = await response.json()
+                        return result["choices"][0]["message"]["content"]
+            
+            def _do_search():
+                return asyncio.run(_do_search_async())
             
             result = self._retry_with_exponential_backoff(_do_search)
             logger.info("Search completed successfully")
@@ -66,7 +92,7 @@ class DataCollector:
             
         except Exception as e:
             logger.error(f"Error searching with DeepSeek: {str(e)}")
-            raise APIError(f"DeepSeek API调用失败: {str(e)}")
+            raise APIError(f"DeepSeek API call failed: {str(e)}")
     
     def _analyze_event(self, event):
         """分析单个事件，添加市场影响、情绪等信息"""
@@ -419,7 +445,7 @@ class DataCollector:
         today = datetime.now().strftime("%Y-%m-%d")
         
         # 构建搜索提示词
-        prompt = f"{DAILY_SEARCH_PROMPT}\n日期: {today}"
+        prompt = f"{DAILY_SEARCH_PROMPT}\nDate: {today}"
         
         # 搜索事件
         result_text = self._search_with_deepseek(prompt)
